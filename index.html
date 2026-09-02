@@ -1,3 +1,8 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>UniUni Mock</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Sans+JP:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -308,11 +313,20 @@
   .export-card p{margin:0;font-size:12px;color:var(--text-muted);line-height:1.6;}
   .export-card img{max-width:100%;border-radius:8px;border:1px solid var(--line);display:block;}
   .export-close{align-self:flex-end;}
+  .code-out{
+    width:100%;min-height:280px;resize:vertical;
+    background:#0d1115;color:#c7d0d8;border:1px solid var(--line);border-radius:8px;
+    padding:12px;font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:1.6;
+    white-space:pre;overflow:auto;
+  }
+  .code-out:focus{outline:2px solid var(--focus);}
 
   ::-webkit-scrollbar{width:10px;height:10px;}
   ::-webkit-scrollbar-track{background:transparent;}
   ::-webkit-scrollbar-thumb{background:#2a333c;border-radius:99px;border:2px solid var(--panel);}
 </style>
+</head>
+<body>
 
 <div class="app">
   <header class="header">
@@ -334,6 +348,7 @@
     </div>
     <div class="spacer"></div>
     <button class="btn danger-ghost" id="clearBtn">クリア</button>
+    <button class="btn ghost" id="exportHtmlBtn">HTMLとして書き出す</button>
     <button class="btn primary" id="exportBtn">画像として書き出す</button>
   </header>
 
@@ -358,6 +373,19 @@
     <h3>書き出し完了</h3>
     <p>画像を右クリック（長押し）して「名前を付けて画像を保存」から保存し、そのままチャットに貼り付けて送ってください。</p>
     <img id="exportImg" alt="書き出したモックアップ画像">
+  </div>
+</div>
+
+<div class="export-overlay" id="exportHtmlOverlay">
+  <div class="export-card">
+    <button class="btn ghost export-close" id="exportHtmlCloseBtn">閉じる ✕</button>
+    <h3>HTML書き出し完了</h3>
+    <p>キャンバスと同じ見た目の、単体で開けるHTMLファイルのコードです。下のボタンでコピーするか、テキストエリアから直接コピーして <code>.html</code> ファイルとして保存してください。<span id="htmlCopyStatus"></span></p>
+    <div class="insp-actions">
+      <button type="button" class="btn primary" id="htmlCopyBtn">コードをコピー</button>
+      <button type="button" class="btn" id="htmlDownloadBtn">ダウンロード</button>
+    </div>
+    <textarea id="exportHtmlCode" class="code-out" readonly spellcheck="false"></textarea>
   </div>
 </div>
 
@@ -975,6 +1003,83 @@
     if(e.target===this) this.classList.remove("show");
   });
 
+  var EXPORT_CSS = [
+    ':root{--panel-2:#1e262e;--line:#2a333c;--text:#e8edf2;--text-muted:#8b98a5;--ink:#0b0f12;}',
+    '*{box-sizing:border-box;}',
+    'body{margin:0;background:#10151a;color:var(--text);font-family:\'IBM Plex Sans JP\',\'Hiragino Sans\',sans-serif;display:flex;align-items:flex-start;justify-content:center;padding:32px;}',
+    '#stage{position:relative;border-radius:10px;overflow:hidden;box-shadow:0 24px 60px -20px rgba(0,0,0,.6);}',
+    '#stage.bg-dark{background:linear-gradient(160deg,#171c22,#10141a);}',
+    '#stage.bg-light{background:#eef1f4;}',
+    '#stage.bg-checker{background-image:conic-gradient(#e4e7ea 25%,transparent 0 50%,#e4e7ea 0 75%,transparent 0);background-size:16px 16px;background-color:#f6f7f8;}',
+    '.part{position:absolute;display:flex;align-items:center;justify-content:center;}',
+    '.p-btn{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-family:\'IBM Plex Sans JP\',sans-serif;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 10px;}',
+    '.p-icon{width:100%;height:100%;border-radius:99px;display:flex;align-items:center;justify-content:center;}',
+    '.p-icon svg{width:46%;height:46%;}',
+    '.p-toggle{width:100%;height:100%;border-radius:99px;position:relative;background:var(--panel-2);border:1px solid var(--line);}',
+    '.p-toggle i{position:absolute;top:8%;bottom:8%;width:42%;border-radius:99px;}',
+    '.p-dropdown{width:100%;height:100%;border-radius:6px;background:var(--panel-2);border:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 10px;font-size:12px;font-weight:500;color:var(--text);}',
+    '.p-dropdown .caret{width:8px;height:8px;border-right:1.6px solid currentColor;border-bottom:1.6px solid currentColor;transform:rotate(45deg);flex:none;margin-left:6px;}',
+    '.p-slider{width:100%;height:100%;display:flex;align-items:center;}',
+    '.p-slider .track{width:100%;height:4px;border-radius:99px;background:var(--line);position:relative;}',
+    '.p-slider .fill{position:absolute;left:0;top:0;bottom:0;border-radius:99px;}',
+    '.p-slider .thumb{position:absolute;top:50%;width:13px;height:13px;border-radius:99px;border:2px solid var(--ink);transform:translate(-50%,-50%);}',
+    '.p-node{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;}',
+    '.p-node .avatar{border-radius:99px;display:flex;align-items:center;justify-content:center;font-family:\'Sora\',sans-serif;font-weight:700;flex:1;width:100%;background:var(--panel-2);}',
+    '.p-node .tag{font-size:10px;font-weight:500;padding:1px 7px;border-radius:99px;background:var(--panel-2);white-space:nowrap;color:var(--text-muted);}',
+    '.p-panel{width:100%;height:100%;border-radius:10px;background:var(--panel-2);border:1px solid var(--line);padding:10px;display:flex;flex-direction:column;justify-content:flex-end;}',
+    '.p-panel .title{font-family:\'Sora\',sans-serif;font-weight:600;font-size:13px;}',
+    '.p-panel .sub{font-size:10.5px;color:var(--text-muted);margin-top:2px;}',
+    '.p-text{font-family:\'Sora\',sans-serif;white-space:nowrap;}'
+  ].join('\n');
+
+  function buildStandaloneHtml(){
+    var clone = stageEl.cloneNode(true);
+    clone.classList.remove("selected");
+    clone.querySelectorAll(".part").forEach(function(el){ el.classList.remove("selected"); });
+    clone.querySelectorAll(".handle").forEach(function(el){ el.remove(); });
+    return '<!doctype html>\n<html lang="ja">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<title>UniUni Mock export</title>\n<link rel="preconnect" href="https://fonts.googleapis.com">\n<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Sans+JP:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">\n<style>\n'+EXPORT_CSS+'\n</style>\n</head>\n<body>\n'+clone.outerHTML+'\n</body>\n</html>\n';
+  }
+
+  document.getElementById("exportHtmlBtn").addEventListener("click",function(){
+    selectPart(null);
+    var code = buildStandaloneHtml();
+    var ta = document.getElementById("exportHtmlCode");
+    ta.value = code;
+    document.getElementById("htmlCopyStatus").textContent = "";
+    document.getElementById("exportHtmlOverlay").classList.add("show");
+    ta.focus(); ta.select();
+  });
+  document.getElementById("htmlCopyBtn").addEventListener("click",function(){
+    var ta = document.getElementById("exportHtmlCode");
+    var status = document.getElementById("htmlCopyStatus");
+    function ok(){ status.textContent = " コピーしました。"; }
+    function fail(){
+      ta.focus(); ta.select();
+      try{ document.execCommand("copy"); ok(); }
+      catch(e){ status.textContent = " コピーに失敗しました。テキストエリアから手動でコピーしてください。"; }
+    }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(ta.value).then(ok, fail);
+    }else{
+      fail();
+    }
+  });
+  document.getElementById("htmlDownloadBtn").addEventListener("click",function(){
+    var code = document.getElementById("exportHtmlCode").value;
+    var blob = new Blob([code],{type:"text/html"});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = "uniuni-mock-export.html";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(url); },1000);
+  });
+  document.getElementById("exportHtmlCloseBtn").addEventListener("click",function(){
+    document.getElementById("exportHtmlOverlay").classList.remove("show");
+  });
+  document.getElementById("exportHtmlOverlay").addEventListener("click",function(e){
+    if(e.target===this) this.classList.remove("show");
+  });
+
   // ---- persistence ----
   var SAVE_KEY = "parts-bench-v1";
   var saveTimer=null;
@@ -1030,9 +1135,8 @@
   buildPalette();
   presetSel.value = "desktop";
   applyPreset();
-  var loaded = load();
-  if(!loaded){
-    ["btn-pill","icon-btn","node","panel"].forEach(function(){});
-  }
+  load();
 })();
 </script>
+</body>
+</html>
