@@ -312,7 +312,7 @@
   .p-icon{width:100%;height:100%;border-radius:99px;display:flex;align-items:center;justify-content:center;}
   .p-icon svg{width:46%;height:46%;}
   .p-toggle{width:100%;height:100%;border-radius:99px;position:relative;background:var(--panel-2);border:1px solid var(--line);}
-  .p-toggle i{position:absolute;top:8%;bottom:8%;width:42%;border-radius:99px;transition:left .12s;}
+  .p-toggle i{position:absolute;border-radius:99px;transition:left .12s;}
   .p-dropdown{width:100%;height:100%;border-radius:6px;background:var(--panel-2);border:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 10px;font-size:12px;font-weight:500;}
   .p-dropdown .caret{width:8px;height:8px;border-right:1.6px solid currentColor;border-bottom:1.6px solid currentColor;transform:rotate(45deg);flex:none;margin-left:6px;}
   .p-slider{width:100%;height:100%;display:flex;align-items:center;}
@@ -626,8 +626,11 @@
       render:function(p){
         var on = p.state==="on";
         var knob = on ? COLORS[p.color].fill : "var(--text-muted)";
+        var pad = Math.round(p.h*0.08);
+        var diameter = p.h - pad*2;
+        var left = on ? (p.w - diameter - pad) : pad;
         return '<div class="p-toggle" style="background:'+(on?"rgba(45,212,191,.15)":"var(--panel-2)")+';border-color:'+(on?COLORS[p.color].fill:"var(--line)")+'">'+
-          '<i style="left:'+(on?"56%":"4%")+';background:'+knob+'"></i></div>';
+          '<i style="left:'+left+'px;top:'+pad+'px;width:'+diameter+'px;height:'+diameter+'px;background:'+knob+'"></i></div>';
       }
     },
     "dropdown":{
@@ -732,15 +735,18 @@
     return function(p){
       var c = COLORS[p.color].fill, ink = COLORS[p.color].ink;
       var sel = p.state==="selected", muted = p.state==="muted";
-      var fontSize = Math.round(p.h*0.22)+"px";
+      var tagH = Math.max(14, Math.round(p.h*0.18));
+      var avatarSize = Math.max(16, Math.min(p.w, p.h - tagH - 3));
+      var avatarBox = "width:"+avatarSize+"px;height:"+avatarSize+"px;flex:none;";
+      var fontSize = Math.round(avatarSize*0.32)+"px";
       var avatar;
       if(shape==="triangle"){
-        avatar = '<div class="avatar avatar-triangle" style="filter:'+(sel?"drop-shadow(0 0 5px rgba(45,212,191,.65))":"none")+'">'+
+        avatar = '<div class="avatar avatar-triangle" style="'+avatarBox+'filter:'+(sel?"drop-shadow(0 0 5px rgba(45,212,191,.65))":"none")+'">'+
           '<svg viewBox="0 0 100 100" preserveAspectRatio="none" class="tri-shape"><polygon points="50,4 4,96 96,96" fill="'+c+'"></polygon></svg>'+
           '<span style="position:relative;color:'+ink+';font-size:'+fontSize+'">'+escapeHtml(p.text.initial)+'</span></div>';
       }else{
         var radius = shape==="circle" ? "99px" : "20%";
-        avatar = '<div class="avatar" style="border-radius:'+radius+';color:'+c+';border:2.5px solid '+c+
+        avatar = '<div class="avatar" style="'+avatarBox+'border-radius:'+radius+';color:'+c+';border:2.5px solid '+c+
           ';box-shadow:'+(sel?"0 0 0 4px rgba(45,212,191,.2)":"none")+';font-size:'+fontSize+'">'+
           escapeHtml(p.text.initial)+'</div>';
       }
@@ -1346,7 +1352,7 @@
     '.p-icon{width:100%;height:100%;border-radius:99px;display:flex;align-items:center;justify-content:center;}',
     '.p-icon svg{width:46%;height:46%;}',
     '.p-toggle{width:100%;height:100%;border-radius:99px;position:relative;background:var(--panel-2);border:1px solid var(--line);}',
-    '.p-toggle i{position:absolute;top:8%;bottom:8%;width:42%;border-radius:99px;}',
+    '.p-toggle i{position:absolute;border-radius:99px;}',
     '.p-dropdown{width:100%;height:100%;border-radius:6px;background:var(--panel-2);border:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 10px;font-size:12px;font-weight:500;color:var(--text);}',
     '.p-dropdown .caret{width:8px;height:8px;border-right:1.6px solid currentColor;border-bottom:1.6px solid currentColor;transform:rotate(45deg);flex:none;margin-left:6px;}',
     '.p-slider{width:100%;height:100%;display:flex;align-items:center;}',
