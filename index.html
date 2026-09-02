@@ -60,6 +60,9 @@
     grid-template-rows:52px 1fr;
     height:100vh;
   }
+  @media (max-width:820px){
+    .app{ grid-template-rows:auto 1fr; }
+  }
 
   .resizer{
     grid-row:2;
@@ -89,6 +92,15 @@
     border-bottom:1px solid var(--line);
     overflow-x:auto;
     scrollbar-width:thin;
+  }
+  @media (max-width:820px){
+    .header{
+      flex-wrap:wrap;
+      height:auto;
+      overflow-x:visible;
+      padding:10px 12px;
+      gap:8px 12px;
+    }
   }
   .brand{
     display:flex;
