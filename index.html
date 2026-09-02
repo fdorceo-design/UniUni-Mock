@@ -155,6 +155,7 @@
   .btn.primary{background:var(--teal);border-color:var(--teal);color:var(--ink);font-weight:600;}
   .btn.primary:hover{filter:brightness(1.08);}
   .btn.ghost{background:transparent;}
+  .btn[aria-pressed="true"]{background:var(--teal);border-color:var(--teal);color:var(--ink);font-weight:600;}
   .btn.danger-ghost{color:var(--danger);}
   .btn:disabled{opacity:.4;cursor:not-allowed;}
 
@@ -393,6 +394,10 @@
         <button class="bg-checker" data-bg="checker" title="透過" aria-label="透過背景"></button>
       </div>
     </div>
+    <div class="hdr-group">
+      <span class="hdr-label">カラー</span>
+      <button type="button" class="btn ghost" id="pastelToggle" aria-pressed="false">パステル</button>
+    </div>
     <div class="spacer"></div>
     <button class="btn danger-ghost" id="clearBtn">クリア</button>
     <button class="btn ghost" id="exportHtmlBtn">HTMLとして書き出す</button>
@@ -489,18 +494,26 @@
     {key:"teal",name:"ティール",hex:"#008080"},
     {key:"aqua",name:"アクア",hex:"#00ffff"}
   ];
-  var COLORS = {};
-  var COLOR_ORDER = [];
-  BASE_COLORS.forEach(function(c){
-    COLORS[c.key] = {
-      fill:c.hex,
-      light:shade(c.hex,0.3),
-      dark:shade(c.hex,-0.28),
-      ink:pickInk(c.hex),
-      name:c.name
-    };
-    COLOR_ORDER.push(c.key);
-  });
+  var COLOR_ORDER = BASE_COLORS.map(function(c){ return c.key; });
+  var PASTEL_MIX = 0.6;
+
+  function buildColors(mode){
+    var out = {};
+    BASE_COLORS.forEach(function(c){
+      var base = mode==="pastel" ? shade(c.hex, PASTEL_MIX) : c.hex;
+      out[c.key] = {
+        fill: base,
+        light: shade(base, mode==="pastel" ? 0.18 : 0.3),
+        dark: shade(base, mode==="pastel" ? -0.14 : -0.28),
+        ink: pickInk(base),
+        name: c.name
+      };
+    });
+    return out;
+  }
+
+  var paletteMode = "normal";
+  var COLORS = buildColors(paletteMode);
 
   var ICONS = {
     play:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>',
@@ -1117,6 +1130,19 @@
     save();
   });
 
+  function setPaletteMode(mode){
+    paletteMode = mode;
+    COLORS = buildColors(paletteMode);
+    var pastelBtn = document.getElementById("pastelToggle");
+    pastelBtn.setAttribute("aria-pressed", mode==="pastel" ? "true" : "false");
+    Object.keys(parts).forEach(renderPart);
+    if(selectedId) buildInspector();
+  }
+  document.getElementById("pastelToggle").addEventListener("click",function(){
+    setPaletteMode(paletteMode==="pastel" ? "normal" : "pastel");
+    save();
+  });
+
   PRESETS.forEach(function(pr){
     var opt = document.createElement("option");
     opt.value = pr.id; opt.textContent = pr.label;
@@ -1289,7 +1315,8 @@
           preset:presetSel.value,
           bg: bgBtn ? bgBtn.getAttribute("data-bg") : "dark",
           paletteW: parseFloat(cs.getPropertyValue("--palette-w")) || null,
-          inspectorW: parseFloat(cs.getPropertyValue("--inspector-w")) || null
+          inspectorW: parseFloat(cs.getPropertyValue("--inspector-w")) || null,
+          paletteMode: paletteMode
         }));
       }catch(err){}
     },200);
@@ -1308,6 +1335,11 @@
     applyPreset();
     if(data.paletteW) appEl.style.setProperty("--palette-w", data.paletteW+"px");
     if(data.inspectorW) appEl.style.setProperty("--inspector-w", data.inspectorW+"px");
+    if(data.paletteMode==="pastel"){
+      paletteMode = "pastel";
+      COLORS = buildColors(paletteMode);
+      document.getElementById("pastelToggle").setAttribute("aria-pressed","true");
+    }
 
     order.forEach(function(id){
       var el = buildPartShell(id);
