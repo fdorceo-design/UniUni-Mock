@@ -668,13 +668,9 @@
     var el = document.createElement("div");
     el.className = "part";
     el.id = id;
-    var handle = document.createElement("div");
-    handle.className = "handle";
-    el.appendChild(handle);
     stageEl.appendChild(el);
 
     wireDrag(el, id);
-    wireResize(handle, id);
     el.addEventListener("pointerdown", function(){ selectPart(id); }, true);
 
     renderPart(id);
@@ -689,6 +685,7 @@
     var el = document.getElementById(id);
     if(!el) return;
     el.innerHTML = t.render(p) + '<div class="handle"></div>';
+    wireResize(el.querySelector(".handle"), id);
   }
 
   function layoutPart(id){
@@ -949,8 +946,6 @@
     el.addEventListener("pointerdown", function(){ selectPart(newId); }, true);
 
     renderPart(newId);
-    var handle = el.querySelector(".handle");
-    wireResize(handle,newId);
     layoutPart(newId);
     selectPart(newId);
     save();
@@ -1133,8 +1128,6 @@
       wireDrag(el,id);
       el.addEventListener("pointerdown", function(){ selectPart(id); }, true);
       renderPart(id);
-      var handle = el.querySelector(".handle");
-      wireResize(handle,id);
       layoutPart(id);
     });
 
