@@ -56,7 +56,7 @@
 
   .app{
     display:grid;
-    grid-template-columns:var(--palette-w,252px) 6px 1fr 6px var(--inspector-w,288px);
+    grid-template-columns:252px 6px 1fr 6px 288px;
     grid-template-rows:52px 1fr;
     height:100vh;
   }
@@ -87,6 +87,8 @@
     padding:0 16px;
     background:var(--panel);
     border-bottom:1px solid var(--line);
+    overflow-x:auto;
+    scrollbar-width:thin;
   }
   .brand{
     display:flex;
@@ -222,11 +224,11 @@
   .stage-wrap{
     grid-column:3;
     grid-row:2;
+    position:relative;
     overflow:auto;
     display:flex;
-    align-items:flex-start;
-    justify-content:center;
     padding:34px;
+    touch-action:pan-x pan-y;
     background:
       radial-gradient(circle at 1px 1px, #202830 1px, transparent 0) 0 0/18px 18px,
       var(--bg);
@@ -234,10 +236,11 @@
   #stage{
     position:relative;
     flex:none;
+    margin:auto;
     border-radius:10px;
     box-shadow:0 0 0 1px var(--line), 0 24px 60px -20px rgba(0,0,0,.6);
     overflow:hidden;
-    touch-action:none;
+    transform-origin:center center;
   }
   #stage.bg-dark{background:linear-gradient(160deg,#171c22,#10141a);}
   #stage.bg-light{background:#eef1f4;}
@@ -245,6 +248,26 @@
     background-image:conic-gradient(#e4e7ea 25%,transparent 0 50%,#e4e7ea 0 75%,transparent 0);
     background-size:16px 16px;background-color:#f6f7f8;
   }
+
+  .zoom-controls{
+    position:absolute;right:16px;bottom:16px;z-index:20;
+    display:flex;align-items:center;gap:2px;
+    background:var(--panel);border:1px solid var(--line);border-radius:8px;
+    padding:4px;box-shadow:0 6px 18px -6px rgba(0,0,0,.5);
+  }
+  .zoom-controls button{
+    width:28px;height:28px;border:0;background:transparent;color:var(--text);
+    border-radius:5px;cursor:pointer;font-size:15px;line-height:1;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .zoom-controls button:hover{background:var(--panel-2);}
+  .zoom-controls #zoomLabel{
+    width:auto;padding:0 8px;font-size:11px;font-family:'IBM Plex Mono',monospace;
+    color:var(--text-muted);
+  }
+  .zoom-controls #zoomLabel:hover{color:var(--text);}
+
+  .palette.collapsed,.inspector.collapsed{padding:0;overflow:hidden;}
 
   .part{
     position:absolute;
@@ -254,6 +277,7 @@
     cursor:grab;
     user-select:none;
     -webkit-user-select:none;
+    touch-action:none;
   }
   .part:active{cursor:grabbing;}
   .part.selected{outline:2px solid var(--teal);outline-offset:2px;box-shadow:0 0 0 5px rgba(45,212,191,.12);}
@@ -398,6 +422,11 @@
       <span class="hdr-label">カラー</span>
       <button type="button" class="btn ghost" id="pastelToggle" aria-pressed="false">パステル</button>
     </div>
+    <div class="hdr-group">
+      <span class="hdr-label">パネル</span>
+      <button type="button" class="btn ghost" id="togglePalette" aria-pressed="false" title="パーツ一覧の表示/非表示">◀一覧</button>
+      <button type="button" class="btn ghost" id="toggleInspector" aria-pressed="false" title="インスペクタの表示/非表示">詳細▶</button>
+    </div>
     <div class="spacer"></div>
     <button class="btn danger-ghost" id="clearBtn">クリア</button>
     <button class="btn ghost" id="exportHtmlBtn">HTMLとして書き出す</button>
@@ -410,6 +439,11 @@
 
   <main class="stage-wrap">
     <div id="stage" class="bg-dark"></div>
+    <div class="zoom-controls">
+      <button type="button" id="zoomOut" aria-label="縮小">－</button>
+      <button type="button" id="zoomLabel" title="クリックでリセット">100%</button>
+      <button type="button" id="zoomIn" aria-label="拡大">＋</button>
+    </div>
   </main>
 
   <div class="resizer" id="resizerRight"></div>
@@ -720,6 +754,7 @@
   var selectedId = null;
   var uidCounter = 1;
   var addCascade = 0;
+  var zoomLevel = 1;
 
   function uid(){ return "p"+(uidCounter++); }
 
@@ -868,8 +903,8 @@
       if(!dragging) return;
       var pr = currentPreset();
       var p = parts[id];
-      var nx = ox + (e.clientX-startX);
-      var ny = oy + (e.clientY-startY);
+      var nx = ox + (e.clientX-startX)/zoomLevel;
+      var ny = oy + (e.clientY-startY)/zoomLevel;
       nx = Math.max(-p.w*0.4, Math.min(pr.w - p.w*0.6, nx));
       ny = Math.max(-p.h*0.4, Math.min(pr.h - p.h*0.6, ny));
       p.x = Math.round(nx); p.y = Math.round(ny);
@@ -897,12 +932,12 @@
       var minW = t.minW||20, minH = t.minH||16;
       var nw, nh;
       if(t.lockAspect){
-        var scale = ((ow+(e.clientX-startX))/ow + (oh+(e.clientY-startY))/oh) / 2;
+        var scale = ((ow+(e.clientX-startX)/zoomLevel)/ow + (oh+(e.clientY-startY)/zoomLevel)/oh) / 2;
         scale = Math.max(scale, minW/ow, minH/oh);
         nw = ow*scale; nh = oh*scale;
       }else{
-        nw = ow + (e.clientX-startX);
-        nh = oh + (e.clientY-startY);
+        nw = ow + (e.clientX-startX)/zoomLevel;
+        nh = oh + (e.clientY-startY)/zoomLevel;
       }
       p.w = Math.max(minW, Math.round(nw));
       p.h = Math.max(minH, Math.round(nh));
@@ -1150,31 +1185,112 @@
   });
   presetSel.addEventListener("change",function(){ applyPreset(); save(); });
 
-  // ---- resizable side panels ----
+  // ---- layout: side panels, hide toggles, mobile ratio ----
   var appEl = document.querySelector(".app");
-  function wirePanelResizer(handle, cssVar, side, minW, maxW){
+  var paletteW = 252, inspectorW = 288;
+  var paletteHidden = false, inspectorHidden = false;
+  var mobileQuery = window.matchMedia("(max-width:820px)");
+  function isMobile(){ return mobileQuery.matches; }
+
+  function updateGrid(){
+    var mobile = isMobile();
+    var pTrack, iTrack, sTrack, rl, rr;
+    if(paletteHidden){ pTrack="0px"; rl="0px"; }
+    else{ pTrack = mobile ? "1fr" : paletteW+"px"; rl="6px"; }
+    if(inspectorHidden){ iTrack="0px"; rr="0px"; }
+    else{ iTrack = mobile ? "1fr" : inspectorW+"px"; rr="6px"; }
+    sTrack = mobile ? "2fr" : "1fr";
+    appEl.style.gridTemplateColumns = [pTrack, rl, sTrack, rr, iTrack].join(" ");
+    paletteEl.classList.toggle("collapsed", paletteHidden);
+    inspectorEl.classList.toggle("collapsed", inspectorHidden);
+  }
+  mobileQuery.addEventListener("change", updateGrid);
+
+  function wirePanelResizer(handle, side, minW, maxW){
     var startX, startW, dragging=false;
     handle.addEventListener("pointerdown", function(e){
+      if(isMobile()) return;
       dragging = true;
       handle.setPointerCapture(e.pointerId);
       handle.classList.add("active");
       startX = e.clientX;
-      startW = parseFloat(getComputedStyle(appEl).getPropertyValue(cssVar)) ||
-        (side==="left" ? paletteEl.getBoundingClientRect().width : inspectorEl.getBoundingClientRect().width);
+      startW = side==="left" ? paletteW : inspectorW;
     });
     handle.addEventListener("pointermove", function(e){
       if(!dragging) return;
       var delta = e.clientX - startX;
       var w = side==="left" ? startW + delta : startW - delta;
       w = Math.max(minW, Math.min(maxW, Math.round(w)));
-      appEl.style.setProperty(cssVar, w+"px");
+      if(side==="left") paletteW = w; else inspectorW = w;
+      updateGrid();
     });
     function end(){ if(dragging){ dragging=false; handle.classList.remove("active"); save(); } }
     handle.addEventListener("pointerup", end);
     handle.addEventListener("pointercancel", end);
   }
-  wirePanelResizer(document.getElementById("resizerLeft"), "--palette-w", "left", 180, 460);
-  wirePanelResizer(document.getElementById("resizerRight"), "--inspector-w", "right", 220, 460);
+  wirePanelResizer(document.getElementById("resizerLeft"), "left", 180, 460);
+  wirePanelResizer(document.getElementById("resizerRight"), "right", 220, 460);
+
+  document.getElementById("togglePalette").addEventListener("click", function(){
+    paletteHidden = !paletteHidden;
+    this.setAttribute("aria-pressed", paletteHidden ? "true" : "false");
+    updateGrid(); save();
+  });
+  document.getElementById("toggleInspector").addEventListener("click", function(){
+    inspectorHidden = !inspectorHidden;
+    this.setAttribute("aria-pressed", inspectorHidden ? "true" : "false");
+    updateGrid(); save();
+  });
+
+  // ---- zoom ----
+  var ZOOM_MIN = 0.25, ZOOM_MAX = 3, ZOOM_STEP = 0.1;
+  function applyZoom(){
+    stageEl.style.transform = zoomLevel===1 ? "" : "scale("+zoomLevel+")";
+    document.getElementById("zoomLabel").textContent = Math.round(zoomLevel*100)+"%";
+  }
+  function setZoom(z){
+    zoomLevel = Math.round(Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z))*100)/100;
+    applyZoom();
+  }
+  document.getElementById("zoomIn").addEventListener("click", function(){ setZoom(zoomLevel+ZOOM_STEP); });
+  document.getElementById("zoomOut").addEventListener("click", function(){ setZoom(zoomLevel-ZOOM_STEP); });
+  document.getElementById("zoomLabel").addEventListener("click", function(){ setZoom(1); });
+
+  document.querySelector(".stage-wrap").addEventListener("wheel", function(e){
+    if(!(e.ctrlKey||e.metaKey)) return;
+    e.preventDefault();
+    setZoom(zoomLevel + (e.deltaY<0 ? ZOOM_STEP : -ZOOM_STEP));
+  }, {passive:false});
+
+  (function wirePinchZoom(){
+    var wrapEl = document.querySelector(".stage-wrap");
+    var pointers = new Map();
+    var pinchStartDist = 0, pinchStartZoom = 1;
+    function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+    wrapEl.addEventListener("pointerdown", function(e){
+      if(e.pointerType!=="touch") return;
+      pointers.set(e.pointerId, {x:e.clientX,y:e.clientY});
+      if(pointers.size===2){
+        var pts = Array.from(pointers.values());
+        pinchStartDist = dist(pts[0],pts[1]);
+        pinchStartZoom = zoomLevel;
+      }
+    });
+    wrapEl.addEventListener("pointermove", function(e){
+      if(!pointers.has(e.pointerId)) return;
+      pointers.set(e.pointerId, {x:e.clientX,y:e.clientY});
+      if(pointers.size===2 && pinchStartDist>0){
+        var pts = Array.from(pointers.values());
+        setZoom(pinchStartZoom * (dist(pts[0],pts[1])/pinchStartDist));
+      }
+    });
+    function release(e){
+      pointers.delete(e.pointerId);
+      if(pointers.size<2) pinchStartDist = 0;
+    }
+    wrapEl.addEventListener("pointerup", release);
+    wrapEl.addEventListener("pointercancel", release);
+  })();
 
   document.getElementById("clearBtn").addEventListener("click",function(){
     if(!order.length) return;
@@ -1187,10 +1303,13 @@
     selectPart(null);
     var btn = this;
     btn.disabled = true; btn.textContent = "書き出し中…";
+    var prevTransform = stageEl.style.transform;
+    stageEl.style.transform = "";
     html2canvas(stageEl,{backgroundColor:null,scale:2}).then(function(canvas){
       document.getElementById("exportImg").src = canvas.toDataURL("image/png");
       document.getElementById("exportOverlay").classList.add("show");
     }).finally(function(){
+      stageEl.style.transform = prevTransform;
       btn.disabled = false; btn.textContent = "画像として書き出す";
     });
   });
@@ -1236,6 +1355,8 @@
   function buildStandaloneHtml(){
     var clone = stageEl.cloneNode(true);
     clone.classList.remove("selected");
+    clone.style.transform = "";
+    clone.style.margin = "";
     clone.querySelectorAll(".part").forEach(function(el){ el.classList.remove("selected"); });
     clone.querySelectorAll(".handle").forEach(function(el){ el.remove(); });
     return '<!doctype html>\n<html lang="ja">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<title>UniUni Mock export</title>\n<link rel="preconnect" href="https://fonts.googleapis.com">\n<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Sans+JP:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">\n<style>\n'+EXPORT_CSS+'\n</style>\n</head>\n<body>\n'+clone.outerHTML+'\n</body>\n</html>\n';
@@ -1309,13 +1430,12 @@
     saveTimer = setTimeout(function(){
       try{
         var bgBtn = document.querySelector("#bgPicker button.active");
-        var cs = getComputedStyle(appEl);
         localStorage.setItem(SAVE_KEY, JSON.stringify({
           parts:parts, order:order, uidCounter:uidCounter,
           preset:presetSel.value,
           bg: bgBtn ? bgBtn.getAttribute("data-bg") : "dark",
-          paletteW: parseFloat(cs.getPropertyValue("--palette-w")) || null,
-          inspectorW: parseFloat(cs.getPropertyValue("--inspector-w")) || null,
+          paletteW:paletteW, inspectorW:inspectorW,
+          paletteHidden:paletteHidden, inspectorHidden:inspectorHidden,
           paletteMode: paletteMode
         }));
       }catch(err){}
@@ -1333,8 +1453,17 @@
     parts = data.parts; order = data.order||Object.keys(parts); uidCounter = data.uidCounter||1;
     if(data.preset) presetSel.value = data.preset;
     applyPreset();
-    if(data.paletteW) appEl.style.setProperty("--palette-w", data.paletteW+"px");
-    if(data.inspectorW) appEl.style.setProperty("--inspector-w", data.inspectorW+"px");
+    if(data.paletteW) paletteW = data.paletteW;
+    if(data.inspectorW) inspectorW = data.inspectorW;
+    if(data.paletteHidden){
+      paletteHidden = true;
+      document.getElementById("togglePalette").setAttribute("aria-pressed","true");
+    }
+    if(data.inspectorHidden){
+      inspectorHidden = true;
+      document.getElementById("toggleInspector").setAttribute("aria-pressed","true");
+    }
+    updateGrid();
     if(data.paletteMode==="pastel"){
       paletteMode = "pastel";
       COLORS = buildColors(paletteMode);
@@ -1365,6 +1494,7 @@
   buildPalette();
   presetSel.value = "mobile";
   applyPreset();
+  updateGrid();
   load();
 })();
 </script>
