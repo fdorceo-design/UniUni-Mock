@@ -56,14 +56,31 @@
 
   .app{
     display:grid;
-    grid-template-columns:252px 1fr 288px;
+    grid-template-columns:var(--palette-w,252px) 6px 1fr 6px var(--inspector-w,288px);
     grid-template-rows:52px 1fr;
     height:100vh;
   }
 
+  .resizer{
+    grid-row:2;
+    cursor:col-resize;
+    position:relative;
+    background:var(--line);
+    touch-action:none;
+  }
+  #resizerLeft{grid-column:2;}
+  #resizerRight{grid-column:4;}
+  .resizer::after{
+    content:"";
+    position:absolute;top:0;bottom:0;left:50%;
+    width:13px;transform:translateX(-50%);
+  }
+  .resizer:hover,.resizer.active{background:var(--teal);}
+
   /* ---------- header ---------- */
   .header{
-    grid-column:1/4;
+    grid-column:1/6;
+    grid-row:1;
     display:flex;
     align-items:center;
     gap:16px;
@@ -143,6 +160,8 @@
 
   /* ---------- palette (left) ---------- */
   .palette{
+    grid-column:1;
+    grid-row:2;
     background:var(--panel);
     border-right:1px solid var(--line);
     overflow-y:auto;
@@ -200,6 +219,8 @@
 
   /* ---------- stage (center) ---------- */
   .stage-wrap{
+    grid-column:3;
+    grid-row:2;
     overflow:auto;
     display:flex;
     align-items:flex-start;
@@ -261,11 +282,11 @@
   .p-slider .track{width:100%;height:4px;border-radius:99px;background:var(--line);position:relative;}
   .p-slider .fill{position:absolute;left:0;top:0;bottom:0;border-radius:99px;}
   .p-slider .thumb{position:absolute;top:50%;width:13px;height:13px;border-radius:99px;border:2px solid var(--ink);transform:translate(-50%,-50%);}
-  .p-node{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;}
+  .p-node{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;}
   .p-node .avatar{border-radius:99px;display:flex;align-items:center;justify-content:center;font-family:'Sora',sans-serif;font-weight:700;flex:1;width:100%;background:var(--panel-2);}
   .p-node .avatar-triangle{border:0;background:transparent;position:relative;align-items:flex-end;padding-bottom:14%;}
   .p-node .avatar-triangle .tri-shape{position:absolute;inset:0;width:100%;height:100%;}
-  .p-node .tag{font-size:10px;font-weight:500;padding:1px 7px;border-radius:99px;background:var(--panel-2);white-space:nowrap;}
+  .p-node .tag{font-size:9.5px;font-weight:500;padding:0 6px;line-height:1.6;border-radius:99px;background:var(--panel-2);white-space:nowrap;}
   .p-panel{width:100%;height:100%;border-radius:10px;background:var(--panel-2);border:1px solid var(--line);padding:10px;display:flex;flex-direction:column;justify-content:flex-end;}
   .p-panel .title{font-family:'Sora',sans-serif;font-weight:600;font-size:13px;}
   .p-panel .sub{font-size:10.5px;color:var(--text-muted);margin-top:2px;}
@@ -273,6 +294,8 @@
 
   /* ---------- inspector (right) ---------- */
   .inspector{
+    grid-column:5;
+    grid-row:2;
     background:var(--panel);
     border-left:1px solid var(--line);
     overflow-y:auto;
@@ -378,9 +401,13 @@
 
   <aside class="palette" id="palette"></aside>
 
+  <div class="resizer" id="resizerLeft"></div>
+
   <main class="stage-wrap">
     <div id="stage" class="bg-dark"></div>
   </main>
+
+  <div class="resizer" id="resizerRight"></div>
 
   <aside class="inspector" id="inspector">
     <div class="insp-empty">
@@ -535,7 +562,7 @@
     },
     "toggle":{
       cat:"入力", label:"トグルスイッチ", sub:"ON / OFF",
-      w:46,h:26,minW:36,minH:20,resizable:true,
+      w:46,h:26,minW:36,minH:20,lockAspect:true,
       states:[{key:"off",label:"OFF"},{key:"on",label:"ON"}],
       render:function(p){
         var on = p.state==="on";
@@ -570,21 +597,21 @@
     },
     "node-circle":{
       cat:"ノード", label:"丸", sub:"アバター＋ラベル",
-      w:78,h:96,minW:44,minH:60,lockAspect:true,
+      w:80,h:88,minW:44,minH:48,lockAspect:true,
       text:[{key:"initial",label:"イニシャル",def:""},{key:"tag",label:"タグ文字",def:""}],
       states:[{key:"default",label:"通常"},{key:"selected",label:"選択中"},{key:"muted",label:"非アクティブ"}],
       render:renderNode("circle")
     },
     "node-triangle":{
       cat:"ノード", label:"三角", sub:"アバター＋ラベル",
-      w:78,h:96,minW:44,minH:60,lockAspect:true,
+      w:80,h:88,minW:44,minH:48,lockAspect:true,
       text:[{key:"initial",label:"イニシャル",def:""},{key:"tag",label:"タグ文字",def:""}],
       states:[{key:"default",label:"通常"},{key:"selected",label:"選択中"},{key:"muted",label:"非アクティブ"}],
       render:renderNode("triangle")
     },
     "node-square":{
       cat:"ノード", label:"四角", sub:"アバター＋ラベル",
-      w:78,h:96,minW:44,minH:60,lockAspect:true,
+      w:80,h:88,minW:44,minH:48,lockAspect:true,
       text:[{key:"initial",label:"イニシャル",def:""},{key:"tag",label:"タグ文字",def:""}],
       states:[{key:"default",label:"通常"},{key:"selected",label:"選択中"},{key:"muted",label:"非アクティブ"}],
       render:renderNode("square")
@@ -1097,6 +1124,32 @@
   });
   presetSel.addEventListener("change",function(){ applyPreset(); save(); });
 
+  // ---- resizable side panels ----
+  var appEl = document.querySelector(".app");
+  function wirePanelResizer(handle, cssVar, side, minW, maxW){
+    var startX, startW, dragging=false;
+    handle.addEventListener("pointerdown", function(e){
+      dragging = true;
+      handle.setPointerCapture(e.pointerId);
+      handle.classList.add("active");
+      startX = e.clientX;
+      startW = parseFloat(getComputedStyle(appEl).getPropertyValue(cssVar)) ||
+        (side==="left" ? paletteEl.getBoundingClientRect().width : inspectorEl.getBoundingClientRect().width);
+    });
+    handle.addEventListener("pointermove", function(e){
+      if(!dragging) return;
+      var delta = e.clientX - startX;
+      var w = side==="left" ? startW + delta : startW - delta;
+      w = Math.max(minW, Math.min(maxW, Math.round(w)));
+      appEl.style.setProperty(cssVar, w+"px");
+    });
+    function end(){ if(dragging){ dragging=false; handle.classList.remove("active"); save(); } }
+    handle.addEventListener("pointerup", end);
+    handle.addEventListener("pointercancel", end);
+  }
+  wirePanelResizer(document.getElementById("resizerLeft"), "--palette-w", "left", 180, 460);
+  wirePanelResizer(document.getElementById("resizerRight"), "--inspector-w", "right", 220, 460);
+
   document.getElementById("clearBtn").addEventListener("click",function(){
     if(!order.length) return;
     if(!confirm("キャンバス上の全パーツを削除します。よろしいですか？")) return;
@@ -1143,11 +1196,11 @@
     '.p-slider .track{width:100%;height:4px;border-radius:99px;background:var(--line);position:relative;}',
     '.p-slider .fill{position:absolute;left:0;top:0;bottom:0;border-radius:99px;}',
     '.p-slider .thumb{position:absolute;top:50%;width:13px;height:13px;border-radius:99px;border:2px solid var(--ink);transform:translate(-50%,-50%);}',
-    '.p-node{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;}',
+    '.p-node{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;}',
     '.p-node .avatar{border-radius:99px;display:flex;align-items:center;justify-content:center;font-family:\'Sora\',sans-serif;font-weight:700;flex:1;width:100%;background:var(--panel-2);}',
     '.p-node .avatar-triangle{border:0;background:transparent;position:relative;align-items:flex-end;padding-bottom:14%;}',
     '.p-node .avatar-triangle .tri-shape{position:absolute;inset:0;width:100%;height:100%;}',
-    '.p-node .tag{font-size:10px;font-weight:500;padding:1px 7px;border-radius:99px;background:var(--panel-2);white-space:nowrap;color:var(--text-muted);}',
+    '.p-node .tag{font-size:9.5px;font-weight:500;padding:0 6px;line-height:1.6;border-radius:99px;background:var(--panel-2);white-space:nowrap;color:var(--text-muted);}',
     '.p-panel{width:100%;height:100%;border-radius:10px;background:var(--panel-2);border:1px solid var(--line);padding:10px;display:flex;flex-direction:column;justify-content:flex-end;}',
     '.p-panel .title{font-family:\'Sora\',sans-serif;font-weight:600;font-size:13px;}',
     '.p-panel .sub{font-size:10.5px;color:var(--text-muted);margin-top:2px;}',
@@ -1230,10 +1283,13 @@
     saveTimer = setTimeout(function(){
       try{
         var bgBtn = document.querySelector("#bgPicker button.active");
+        var cs = getComputedStyle(appEl);
         localStorage.setItem(SAVE_KEY, JSON.stringify({
           parts:parts, order:order, uidCounter:uidCounter,
           preset:presetSel.value,
-          bg: bgBtn ? bgBtn.getAttribute("data-bg") : "dark"
+          bg: bgBtn ? bgBtn.getAttribute("data-bg") : "dark",
+          paletteW: parseFloat(cs.getPropertyValue("--palette-w")) || null,
+          inspectorW: parseFloat(cs.getPropertyValue("--inspector-w")) || null
         }));
       }catch(err){}
     },200);
@@ -1250,6 +1306,8 @@
     parts = data.parts; order = data.order||Object.keys(parts); uidCounter = data.uidCounter||1;
     if(data.preset) presetSel.value = data.preset;
     applyPreset();
+    if(data.paletteW) appEl.style.setProperty("--palette-w", data.paletteW+"px");
+    if(data.inspectorW) appEl.style.setProperty("--inspector-w", data.inspectorW+"px");
 
     order.forEach(function(id){
       var el = buildPartShell(id);
@@ -1273,7 +1331,7 @@
 
   // ---- init ----
   buildPalette();
-  presetSel.value = "desktop";
+  presetSel.value = "mobile";
   applyPreset();
   load();
 })();
